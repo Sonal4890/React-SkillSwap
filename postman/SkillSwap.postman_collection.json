@@ -1,0 +1,153 @@
+{
+  "info": {
+    "name": "SkillSwap API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "c6f9a2e0-0000-4000-8000-000000skillswap"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api","auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Tester\",\n  \"email\": \"john.tester@example.com\",\n  \"password\": \"Password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@skillswap.com\",\n  \"password\": \"admin123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api","auth","me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api","auth","logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "item": [
+        { "name": "Get All", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses?page=1&limit=12&sort=createdAt&order=desc", "host": ["{{baseUrl}}"], "path": ["api","courses"], "query": [{"key":"page","value":"1"},{"key":"limit","value":"12"},{"key":"sort","value":"createdAt"},{"key":"order","value":"desc"}] } } },
+        { "name": "Latest", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses/latest", "host": ["{{baseUrl}}"], "path": ["api","courses","latest"] } } },
+        { "name": "Trending", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses/trending", "host": ["{{baseUrl}}"], "path": ["api","courses","trending"] } } },
+        { "name": "Search", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses/search?q=react", "host": ["{{baseUrl}}"], "path": ["api","courses","search"], "query": [{"key":"q","value":"react"}] } } },
+        { "name": "By Category", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses/category/development", "host": ["{{baseUrl}}"], "path": ["api","courses","category","development"] } } },
+        { "name": "Get By Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/courses/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","courses", "{{courseId}}"] } } },
+        {
+          "name": "Create (Admin/Instructor)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/courses", "host": ["{{baseUrl}}"], "path": ["api","courses"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"course_name\": \"New Course\",\n  \"description\": \"Great course\",\n  \"price\": 1999,\n  \"category\": \"development\",\n  \"subcategory\": \"frontend\",\n  \"course_image\": \"https://example.com/image.jpg\",\n  \"instructor\": \"Admin User\",\n  \"instructor_email\": \"admin@skillswap.com\",\n  \"duration\": \"10 hours\",\n  \"level\": \"beginner\",\n  \"language\": \"English\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update (Admin/Instructor)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/courses/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","courses","{{courseId}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"price\": 2499,\n  \"isActive\": true\n}" }
+          }
+        },
+        {
+          "name": "Delete (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/courses/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","courses","{{courseId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        { "name": "Get Cart", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/cart", "host": ["{{baseUrl}}"], "path": ["api","cart"] } } },
+        { "name": "Count", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/cart/count", "host": ["{{baseUrl}}"], "path": ["api","cart","count"] } } },
+        { "name": "Add", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/cart", "host": ["{{baseUrl}}"], "path": ["api","cart"] }, "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" } } },
+        { "name": "Remove", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/cart/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","cart","{{courseId}}"] } } },
+        { "name": "Clear", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/cart", "host": ["{{baseUrl}}"], "path": ["api","cart"] } } }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        { "name": "Get Wishlist", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/wishlist", "host": ["{{baseUrl}}"], "path": ["api","wishlist"] } } },
+        { "name": "Add", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/wishlist", "host": ["{{baseUrl}}"], "path": ["api","wishlist"] }, "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" } } },
+        { "name": "Remove", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/wishlist/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","wishlist","{{courseId}}"] } } },
+        { "name": "Clear", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/wishlist", "host": ["{{baseUrl}}"], "path": ["api","wishlist"] } } },
+        { "name": "Check", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/wishlist/check/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","wishlist","check","{{courseId}}"] } } }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        { "name": "Place Order", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api","orders"] }, "body": { "mode": "raw", "raw": "{}" } } },
+        { "name": "Process Payment", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/orders/payment", "host": ["{{baseUrl}}"], "path": ["api","orders","payment"] }, "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"method\": \"card\"\n}" } } },
+        { "name": "My Orders", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api","orders"] } } },
+        { "name": "Order Stats (Admin)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/orders/stats", "host": ["{{baseUrl}}"], "path": ["api","orders","stats"] } } },
+        { "name": "Order By Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId}}"] } } },
+        { "name": "All Orders (Admin)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/orders/admin/all", "host": ["{{baseUrl}}"], "path": ["api","orders","admin","all"] } } },
+        { "name": "Update Status (Admin)", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/orders/{{orderId}}", "host": ["{{baseUrl}}"], "path": ["api","orders","{{orderId}}"] }, "body": { "mode": "raw", "raw": "{\n  \"status\": \"processing\"\n}" } } }
+      ]
+    },
+    {
+      "name": "Enrollments",
+      "item": [
+        { "name": "Enroll", "request": { "method": "POST", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/enrollments", "host": ["{{baseUrl}}"], "path": ["api","enrollments"] }, "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}" } } },
+        { "name": "My Enrollments", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/enrollments", "host": ["{{baseUrl}}"], "path": ["api","enrollments"] } } },
+        { "name": "By Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/enrollments/{{enrollmentId}}", "host": ["{{baseUrl}}"], "path": ["api","enrollments","{{enrollmentId}}"] } } },
+        { "name": "Update Progress", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/enrollments/{{enrollmentId}}/progress", "host": ["{{baseUrl}}"], "path": ["api","enrollments","{{enrollmentId}}","progress"] }, "body": { "mode": "raw", "raw": "{\n  \"progress\": 50\n}" } } },
+        { "name": "Check", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/enrollments/check/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api","enrollments","check","{{courseId}}"] } } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "List Users", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/users", "host": ["{{baseUrl}}"], "path": ["api","admin","users"] } } },
+        { "name": "Block/Unblock User", "request": { "method": "PUT", "header": [{"key":"Content-Type","value":"application/json"}], "url": { "raw": "{{baseUrl}}/api/admin/users/{{userId}}/block", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}","block"] }, "body": { "mode": "raw", "raw": "{}" } } },
+        { "name": "Delete User", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api","admin","users","{{userId}}"] } } },
+        { "name": "Stats", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/admin/stats", "host": ["{{baseUrl}}"], "path": ["api","admin","stats"] } } }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "courseId", "value": "6655aa11aa11aa11aa11aa11" },
+    { "key": "orderId", "value": "6655bb22bb22bb22bb22bb22" },
+    { "key": "enrollmentId", "value": "6655cc33cc33cc33cc33cc33" },
+    { "key": "userId", "value": "6655dd44dd44dd44dd44dd44" }
+  ]
+}

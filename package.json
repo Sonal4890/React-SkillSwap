@@ -1,0 +1,19 @@
+{
+  "name": "skillswap",
+  "version": "1.0.0",
+  "description": "Production-ready MERN stack course selling platform with separate Admin and User panels.",
+  "main": "index.js",
+  "scripts": {
+    "skillSwap": "concurrently \"npm:server\" \"npm:client\"",
+    "server": "npm --prefix skillswap-backend run dev",
+    "client": "npm --prefix skillswap-frontend run dev",
+    "seed": "node setup-database.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
