@@ -11,9 +11,9 @@ const {
   getCoursesByCategory,
   searchCourses
 } = require('../controllers/courseController');
-// Course input validation intentionally minimized per requirements
 const { isLoggedIn, isAdmin, isAdminOrInstructor } = require('../middleware/auth');
 const { validateObjectId } = require('../middleware/objectId');
+const { validateCourse } = require('../middleware/validation');
 
 // @route   GET /api/courses
 // @desc    Get all courses with filtering, search, and pagination
@@ -48,12 +48,12 @@ router.get('/:id', validateObjectId('id'), getCourseById);
 // @route   POST /api/courses
 // @desc    Create new course
 // @access  Private/Admin/Instructor
-router.post('/', isLoggedIn, isAdminOrInstructor, createCourse);
+router.post('/', isLoggedIn, isAdminOrInstructor, validateCourse, createCourse);
 
 // @route   PUT /api/courses/:id
 // @desc    Update course
 // @access  Private/Admin/Instructor
-router.put('/:id', isLoggedIn, isAdminOrInstructor, validateObjectId('id'), updateCourse);
+router.put('/:id', isLoggedIn, isAdminOrInstructor, validateObjectId('id'), validateCourse, updateCourse);
 
 // @route   DELETE /api/courses/:id
 // @desc    Delete course

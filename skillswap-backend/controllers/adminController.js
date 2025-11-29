@@ -17,6 +17,11 @@ const toggleBlockUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
+    // Prevent blocking admins
+    if (user.role === 'admin' || user.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Cannot block admin users' });
+    }
+
     user.isBlocked = !user.isBlocked;
     await user.save();
     res.status(200).json({ success: true, message: user.isBlocked ? 'User blocked' : 'User unblocked', user: { id: user._id, isBlocked: user.isBlocked } });

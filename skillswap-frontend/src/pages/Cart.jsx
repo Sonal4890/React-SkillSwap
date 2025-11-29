@@ -9,7 +9,7 @@ export default function Cart() {
   const dispatch = useDispatch();
   const { cart, loading, error } = useSelector(s => s.cart);
   const { user } = useSelector(s => s.auth);
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  // Payment mode removed; orders will be placed without selecting a method
 
   useEffect(() => {
     dispatch(fetchCart());
@@ -32,7 +32,7 @@ export default function Cart() {
     }
     
     try {
-      const result = await dispatch(placeOrder({ paymentMethod }));
+      const result = await dispatch(placeOrder({}));
       if (result.meta.requestStatus === 'fulfilled') {
         // Redirect to success page or show success message
         alert('Order placed successfully!');
@@ -174,16 +174,7 @@ export default function Cart() {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Payment Method</label>
-                <select value={paymentMethod} onChange={(e)=>setPaymentMethod(e.target.value)} className="w-full px-4 py-3 rounded-xl border-2 border-gray-800 bg-gray-900 text-gray-100">
-                  <option value="card">Card</option>
-                  <option value="upi">UPI</option>
-                  <option value="netbanking">Net Banking</option>
-                  <option value="wallet">Wallet</option>
-                  <option value="cash">Cash</option>
-                </select>
-              </div>
+              
 
               <button
                 onClick={handleCheckout}

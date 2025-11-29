@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedInAdmin, isAdmin } = require('../middleware/auth');
 const { validateObjectId } = require('../middleware/objectId');
 const { listUsers, toggleBlockUser, deleteUser, getStats } = require('../controllers/adminController');
 
-router.use(isLoggedIn, isAdmin);
+router.use(isLoggedInAdmin, isAdmin);
 
 // Users
 router.get('/users', listUsers);

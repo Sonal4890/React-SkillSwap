@@ -21,7 +21,10 @@ export const loginUser = createAsyncThunk('auth/login', async (payload, { reject
 
 export const fetchMe = createAsyncThunk('auth/me', async (_, { rejectWithValue }) => {
   try {
-    const { data } = await api.get('/api/auth/me');
+    // If current path is admin, call the admin-specific me endpoint to bind to admin cookie
+    const isAdminPath = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    const endpoint = isAdminPath ? '/api/auth/admin/me' : '/api/auth/me';
+    const { data } = await api.get(endpoint);
     return data;
   } catch (err) {
     return rejectWithValue(err.response?.data || { message: 'Fetch me failed' });

@@ -1,5 +1,31 @@
 const Course = require('../models/Course');
-// Validation minimized: only non-empty and duplicate prevention will be enforced manually
+const { validationResult } = require('express-validator');
+
+// Helpers
+const normalizeCourseName = (name = '') => name.trim().toLowerCase();
+
+const dedupeCourses = (courses = []) => {
+  const seen = new Set();
+  return courses.filter(course => {
+    const key = normalizeCourseName(course.course_name || course._id?.toString() || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const getUniqueCourseTotal = async (filter = {}) => {
+  const result = await Course.aggregate([
+    { $match: filter },
+    {
+      $group: {
+        _id: { $toLower: '$course_name' }
+      }
+    },
+    { $count: 'count' }
+  ]);
+  return result[0]?.count || 0;
+};
 
 // Get all courses with filtering, search, and pagination
 const getAllCourses = async (req, res) => {
@@ -29,12 +55,14 @@ const getAllCourses = async (req, res) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
     
-    // Search functionality
-    if (search) {
+    // Search functionality - empty search returns default list
+    if (search && search.trim() !== '') {
       filter.$or = [
         { course_name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { instructor: { $regex: search, $options: 'i' } }
+        { instructor: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { subcategory: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -43,23 +71,27 @@ const getAllCourses = async (req, res) => {
     sortObj[sort] = order === 'desc' ? -1 : 1;
 
     // Calculate pagination
-    const skip = (page - 1) * limit;
+    const limitNumber = Math.max(1, Number(limit));
+    const pageNumber = Math.max(1, Number(page));
+    const skip = (pageNumber - 1) * limitNumber;
     
-    const courses = await Course.find(filter)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(Number(limit))
-      .populate('instructor', 'name email');
+    const [rawCourses, totalUnique] = await Promise.all([
+      Course.find(filter)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNumber),
+      getUniqueCourseTotal(filter)
+    ]);
 
-    const total = await Course.countDocuments(filter);
-    const totalPages = Math.ceil(total / limit);
+    const courses = dedupeCourses(rawCourses);
+    const totalPages = Math.max(1, Math.ceil(totalUnique / limitNumber));
     
     res.status(200).json({
       success: true,
       count: courses.length,
-      total,
+      total: totalUnique,
       totalPages,
-      currentPage: Number(page),
+      currentPage: pageNumber,
       courses
     });
   } catch (error) {
@@ -99,6 +131,16 @@ const getCourseById = async (req, res) => {
 // Create new course (Admin/Instructor only)
 const createCourse = async (req, res) => {
   try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const firstError = errors.array()[0];
+      return res.status(400).json({ 
+        success: false, 
+        message: firstError.msg 
+      });
+    }
+
     const { 
       course_name, 
       description, 
@@ -107,35 +149,29 @@ const createCourse = async (req, res) => {
       subcategory,
       course_image, 
       instructor,
-      instructor_email,
       duration,
-      level,
-      language
+      level
     } = req.body;
 
-    // Non-empty minimal checks
-    if (!course_name || !description || price === undefined || price === null || !category) {
-      return res.status(400).json({ success: false, message: 'Required fields are missing' });
-    }
+    // Trim course_name to handle leading/trailing spaces
+    const trimmedCourseName = course_name.trim();
 
     // Duplicate prevention by unique course_name (case-insensitive)
-    const existing = await Course.findOne({ course_name: { $regex: `^${course_name}$`, $options: 'i' } });
+    const existing = await Course.findOne({ course_name: { $regex: `^${trimmedCourseName}$`, $options: 'i' } });
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Course with this name already exists' });
+      return res.status(400).json({ success: false, message: 'A course with this name already exists' });
     }
 
     const course = await Course.create({
-      course_name,
+      course_name: trimmedCourseName,
       description,
       price,
       category,
       subcategory,
       course_image,
       instructor,
-      instructor_email,
       duration,
-      level,
-      language
+      level
     });
 
     res.status(201).json({
@@ -155,6 +191,16 @@ const createCourse = async (req, res) => {
 // Update course (Admin/Instructor only)
 const updateCourse = async (req, res) => {
   try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const firstError = errors.array()[0];
+      return res.status(400).json({ 
+        success: false, 
+        message: firstError.msg 
+      });
+    }
+
     const course = await Course.findById(req.params.id);
     
     if (!course) {
@@ -172,39 +218,34 @@ const updateCourse = async (req, res) => {
       subcategory,
       course_image, 
       instructor,
-      instructor_email,
       duration,
       level,
-      language,
       isActive
     } = req.body;
-    // Non-empty minimal checks (only for provided fields)
-    if (course_name !== undefined && !course_name) return res.status(400).json({ success: false, message: 'Course name cannot be empty' });
-    if (description !== undefined && !description) return res.status(400).json({ success: false, message: 'Description cannot be empty' });
-    if (category !== undefined && !category) return res.status(400).json({ success: false, message: 'Category cannot be empty' });
+
+    // Trim course_name to handle leading/trailing spaces
+    const trimmedCourseName = course_name ? course_name.trim() : course.course_name;
 
     // Duplicate prevention when changing name
-    if (course_name && course_name.toLowerCase() !== course.course_name.toLowerCase()) {
-      const existing = await Course.findOne({ course_name: { $regex: `^${course_name}$`, $options: 'i' } });
+    if (course_name && trimmedCourseName.toLowerCase() !== course.course_name.toLowerCase()) {
+      const existing = await Course.findOne({ course_name: { $regex: `^${trimmedCourseName}$`, $options: 'i' } });
       if (existing) {
-        return res.status(400).json({ success: false, message: 'Course with this name already exists' });
+        return res.status(400).json({ success: false, message: 'A course with this name already exists' });
       }
     }
 
     const updatedCourse = await Course.findByIdAndUpdate(
       req.params.id,
       { 
-        course_name, 
+        course_name: trimmedCourseName, 
         description, 
         price, 
         category, 
         subcategory,
         course_image, 
         instructor,
-        instructor_email,
         duration,
         level,
-        language,
         isActive
       },
       { new: true, runValidators: true }
@@ -254,9 +295,11 @@ const deleteCourse = async (req, res) => {
 // Get latest courses (for home page)
 const getLatestCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isActive: true })
-      .sort({ createdAt: -1 })
-      .limit(6);
+    const courses = dedupeCourses(
+      await Course.find({ isActive: true })
+        .sort({ createdAt: -1 })
+        .limit(6)
+    );
     
     res.status(200).json({
       success: true,
@@ -275,9 +318,11 @@ const getLatestCourses = async (req, res) => {
 // Get trending courses (most enrolled)
 const getTrendingCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isActive: true })
-      .sort({ enrolledCount: -1, createdAt: -1 })
-      .limit(6);
+    const courses = dedupeCourses(
+      await Course.find({ isActive: true })
+        .sort({ enrolledCount: -1, createdAt: -1 })
+        .limit(6)
+    );
     
     res.status(200).json({
       success: true,
@@ -298,27 +343,30 @@ const getCoursesByCategory = async (req, res) => {
   try {
     const { category } = req.params;
     const { page = 1, limit = 12 } = req.query;
-    
-    const skip = (page - 1) * limit;
-    
-    const courses = await Course.find({ 
-      category: category,
-      isActive: true 
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
+    const limitNumber = Math.max(1, Number(limit));
+    const pageNumber = Math.max(1, Number(page));
+    const skip = (pageNumber - 1) * limitNumber;
 
-    const total = await Course.countDocuments({ 
-      category: category,
-      isActive: true 
-    });
+    const baseFilter = { category: category, isActive: true };
+    
+    const [rawCourses, totalUnique] = await Promise.all([
+      Course.find(baseFilter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNumber),
+      getUniqueCourseTotal(baseFilter)
+    ]);
+
+    const courses = dedupeCourses(rawCourses);
+    const totalPages = Math.max(1, Math.ceil(totalUnique / limitNumber));
     
     res.status(200).json({
       success: true,
       count: courses.length,
-      total,
+      total: totalUnique,
+      totalPages,
       category,
+      currentPage: pageNumber,
       courses
     });
   } catch (error) {
@@ -335,50 +383,47 @@ const searchCourses = async (req, res) => {
   try {
     const { q, page = 1, limit = 12 } = req.query;
     
-    if (!q) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search query is required'
-      });
+    // Empty search is valid - return default list (no filter applied)
+    if (!q || q.trim() === '') {
+      return getAllCourses(req, res);
     }
 
-    const skip = (page - 1) * limit;
-    
-    const courses = await Course.find({
-      $and: [
-        { isActive: true },
-        {
-          $or: [
-            { course_name: { $regex: q, $options: 'i' } },
-            { description: { $regex: q, $options: 'i' } },
-            { instructor: { $regex: q, $options: 'i' } },
-            { category: { $regex: q, $options: 'i' } }
-          ]
-        }
-      ]
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
+    const limitNumber = Math.max(1, Number(limit));
+    const pageNumber = Math.max(1, Number(page));
+    const skip = (pageNumber - 1) * limitNumber;
 
-    const total = await Course.countDocuments({
+    const searchFilter = {
       $and: [
         { isActive: true },
         {
           $or: [
-            { course_name: { $regex: q, $options: 'i' } },
-            { description: { $regex: q, $options: 'i' } },
-            { instructor: { $regex: q, $options: 'i' } },
-            { category: { $regex: q, $options: 'i' } }
+            { course_name: { $regex: q.trim(), $options: 'i' } },
+            { description: { $regex: q.trim(), $options: 'i' } },
+            { instructor: { $regex: q.trim(), $options: 'i' } },
+            { category: { $regex: q.trim(), $options: 'i' } },
+            { subcategory: { $regex: q.trim(), $options: 'i' } }
           ]
         }
       ]
-    });
+    };
+
+    const [rawCourses, totalUnique] = await Promise.all([
+      Course.find(searchFilter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNumber),
+      getUniqueCourseTotal(searchFilter)
+    ]);
+
+    const courses = dedupeCourses(rawCourses);
+    const totalPages = Math.max(1, Math.ceil(totalUnique / limitNumber));
     
     res.status(200).json({
       success: true,
       count: courses.length,
-      total,
+      total: totalUnique,
+      totalPages,
+      currentPage: pageNumber,
       query: q,
       courses
     });

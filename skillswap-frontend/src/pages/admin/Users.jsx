@@ -105,9 +105,15 @@ export default function Users() {
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{new Date(user.createdAt).toLocaleDateString()}</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
 						<div className="flex space-x-2">
-							<button onClick={() => toggleBlock(user._id)} className="text-blue-400 hover:text-blue-300" title="Block/Unblock">
-								<i className="fas fa-user-slash"></i>
-							</button>
+							{user.role !== 'admin' && !user.isAdmin ? (
+								<button onClick={() => toggleBlock(user._id)} className="text-blue-400 hover:text-blue-300" title="Block/Unblock">
+									<i className="fas fa-user-slash"></i>
+								</button>
+							) : (
+								<span className="text-gray-500 cursor-not-allowed" title="Cannot block admin users">
+									<i className="fas fa-user-slash"></i>
+								</span>
+							)}
 						</div>
 											</td>
 									</tr>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { fetchAllCourses, searchCourses, fetchCoursesByCategory } from '../store/slices/coursesSlice';
@@ -11,6 +11,7 @@ export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useSelector(s => s.auth);
   const { list, searchResults, categoryResults, pagination, loading } = useSelector(s => s.courses);
+  const myOrders = useSelector(s => s.orders.orders);
   
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
@@ -76,8 +77,21 @@ export default function Shop() {
 
   const handleSortChange = (sort) => {
     setSortBy(sort);
+    // Default sort orders per field
+    if (sort === 'course_name') setSortOrder('asc');
+    else if (sort === 'price') setSortOrder('asc');
+    else setSortOrder('desc');
     setCurrentPage(1);
   };
+
+  // Ensure default order matches selected sort when landing via URL without order param
+  useEffect(() => {
+    if (!searchParams.get('order')) {
+      if (sortBy === 'course_name' && sortOrder !== 'asc') setSortOrder('asc');
+      if (sortBy === 'price' && sortOrder !== 'asc') setSortOrder('asc');
+      if ((sortBy === 'createdAt' || sortBy === 'enrolledCount') && sortOrder !== 'desc') setSortOrder('desc');
+    }
+  }, [sortBy]);
 
   const handleAddToCart = async (courseId) => {
     if (!user) {
@@ -85,10 +99,16 @@ export default function Shop() {
       return;
     }
     if (user.isAdmin) return; // admins cannot buy
+    if (purchasedCourseIds.has(courseId)) {
+      alert('You are already enrolled in this course.');
+      return;
+    }
     try {
       await dispatch(addToCart(courseId)).unwrap();
       window.location.href = '/cart';
-    } catch {}
+    } catch (e) {
+      window.location.href = '/login';
+    }
   };
 
   const handleAddToWishlist = (courseId) => {
@@ -97,28 +117,36 @@ export default function Shop() {
       return;
     }
     if (user.isAdmin) return; // admins cannot wishlist
+    if (purchasedCourseIds.has(courseId)) {
+      alert('Already enrolled – wishlist not needed.');
+      return;
+    }
     dispatch(addToWishlist(courseId));
   };
 
-  const dedupe = (arr) => {
+  const purchasedCourseIds = useMemo(() => {
+    const ids = new Set();
+    (myOrders || []).forEach(order => {
+      (order?.courses || []).forEach(item => {
+        const id = item?.course?._id || item?.course;
+        if (id) ids.add(id.toString());
+      });
+    });
+    return ids;
+  }, [myOrders]);
+
+  const courses = useMemo(() => {
+    const source = searchQuery ? searchResults : selectedCategory ? categoryResults : list;
     const seen = new Set();
-    const out = [];
-    for (const c of arr || []) {
-      if (c && !seen.has(c._id)) {
-        seen.add(c._id);
-        out.push(c);
-      }
-    }
-    return out;
-  };
-
-  const getDisplayCourses = () => {
-    if (searchQuery) return dedupe(searchResults);
-    if (selectedCategory) return dedupe(categoryResults);
-    return dedupe(list);
-  };
-
-  const courses = getDisplayCourses();
+    const filtered = [];
+    (source || []).forEach(course => {
+      const id = course?._id;
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      filtered.push(course);
+    });
+    return filtered;
+  }, [list, searchResults, categoryResults, searchQuery, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -214,7 +242,9 @@ export default function Shop() {
 
             {/* Course Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {courses.map((course, index) => (
+              {courses.map((course, index) => {
+                const isOwned = purchasedCourseIds.has(course._id);
+                return (
                 <div 
                   key={course._id} 
                   className="group bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105 hover:-translate-y-2 border border-gray-100"
@@ -232,15 +262,17 @@ export default function Shop() {
                         {categories.find(c => c.value === course.category)?.label || course.category}
                       </span>
                     </div>
-                    <div className="absolute top-4 right-4">
-                      <button 
-                        onClick={() => handleAddToWishlist(course._id)}
-                        className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
-                        title="Add to Wishlist"
-                      >
-                        <i className="far fa-heart"></i>
-                      </button>
-                    </div>
+                    {!isOwned && (
+                      <div className="absolute top-4 right-4">
+                        <button 
+                          onClick={() => handleAddToWishlist(course._id)}
+                          className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300"
+                          title="Add to Wishlist"
+                        >
+                          <i className="far fa-heart"></i>
+                        </button>
+                      </div>
+                    )}
                     <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <Link 
                         to={`/course/${course._id}`} 
@@ -266,25 +298,44 @@ export default function Shop() {
                         </div>
                         <span className="text-sm text-gray-500">({course.rating || 4.8})</span>
                       </div>
-                      <span className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        ₹{course.price}
-                      </span>
+                      {isOwned ? (
+                        <span className="text-sm font-semibold text-green-600 flex items-center">
+                          <i className="fas fa-check-circle mr-1"></i>
+                          Enrolled
+                        </span>
+                      ) : (
+                        <span className="text-2xl font-black bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                          ₹{course.price}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex gap-3">
-                      <button 
-                        onClick={() => handleAddToCart(course._id)}
-                        className="flex-1 py-3 rounded-2xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-                      >
-                        <i className="fas fa-rocket mr-2"></i>
-                        Enroll Now
-                      </button>
-                      <button 
-                        onClick={() => handleAddToCart(course._id)}
-                        className="px-4 py-3 rounded-2xl border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300 hover:scale-105"
-                        title="Add to Cart"
-                      >
-                        <i className="fas fa-shopping-cart"></i>
-                      </button>
+                    <div className="flex gap-3 bg-gray-100 rounded-2xl p-2">
+                      {isOwned ? (
+                        <Link 
+                          to={`/course/${course._id}`}
+                          className="flex-1 py-3 rounded-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-center"
+                        >
+                          <i className="fas fa-play mr-2"></i>
+                          Continue Learning
+                        </Link>
+                      ) : (
+                        <>
+                          <button 
+                            onClick={() => handleAddToCart(course._id)}
+                            className="flex-1 py-3 rounded-2xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                          >
+                            <i className="fas fa-rocket mr-2"></i>
+                            Enroll Now
+                          </button>
+                          <button 
+                            onClick={() => handleAddToCart(course._id)}
+                            className="px-4 py-3 rounded-2xl border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white transition-all duration-300 hover:scale-105"
+                            title="Add to Cart"
+                          >
+                            <i className="fas fa-shopping-cart"></i>
+                          </button>
+                        </>
+                      )}
                     </div>
                     {course.enrolledCount > 0 && (
                       <div className="mt-4 text-center">
@@ -296,7 +347,7 @@ export default function Shop() {
                     )}
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
 
             {/* Pagination */}

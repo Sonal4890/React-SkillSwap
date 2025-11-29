@@ -25,7 +25,11 @@ export default function Dashboard() {
         // fail silently for now; could show a toast
       }
     };
-    if (user?.isAdmin) load();
+    if (user?.isAdmin) {
+      load();
+      const id = setInterval(load, 5000);
+      return () => clearInterval(id);
+    }
   }, [user?.isAdmin]);
 
   const [search, setSearch] = useState('');

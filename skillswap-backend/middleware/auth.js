@@ -3,10 +3,11 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'skillswap_dev_secret_change_me';
 
-// Middleware to check if user is logged in
+// Middleware to check if user is logged in (accept user or admin token)
 const isLoggedIn = async (req, res, next) => {
 	try {
-		const token = req.cookies.token;
+		// Prefer admin token when both exist so admin actions work on non-admin paths too
+		const token = req.cookies.admin_token || req.cookies.user_token;
 
 		if (!token) {
 			return res.status(401).json({
@@ -25,6 +26,14 @@ const isLoggedIn = async (req, res, next) => {
 			});
 		}
 
+		// Check if user is blocked (admins cannot be blocked)
+		if (user.isBlocked && (user.role !== 'admin' && !user.isAdmin)) {
+			return res.status(403).json({
+				success: false,
+				message: 'Admin Blocked You'
+			});
+		}
+
 		req.user = user;
 		next();
 	} catch (error) {
@@ -33,6 +42,62 @@ const isLoggedIn = async (req, res, next) => {
 			message: 'Invalid token.'
 		});
 	}
+};
+
+// Middleware to check logged-in USER using only user token
+const isLoggedInUser = async (req, res, next) => {
+  try {
+    const token = req.cookies.user_token;
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid token. User not found.' });
+    }
+    
+    // Check if user is blocked (admins cannot be blocked)
+    if (user.isBlocked && (user.role !== 'admin' && !user.isAdmin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin Blocked You'
+      });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
+};
+
+// Middleware to check logged-in ADMIN using only admin token
+const isLoggedInAdmin = async (req, res, next) => {
+  try {
+    const token = req.cookies.admin_token;
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Access denied. No token provided.' });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid token. User not found.' });
+    }
+    
+    // Check if user is blocked (admins cannot be blocked)
+    if (user.isBlocked && (user.role !== 'admin' && !user.isAdmin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin Blocked You'
+      });
+    }
+    
+    req.user = user;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
 };
 
 // Middleware to check if user is admin
@@ -87,4 +152,4 @@ const isAdminOrInstructor = async (req, res, next) => {
 	}
 };
 
-module.exports = { isLoggedIn, isAdmin, isAdminOrInstructor };
+module.exports = { isLoggedIn, isAdmin, isAdminOrInstructor, isLoggedInUser, isLoggedInAdmin };

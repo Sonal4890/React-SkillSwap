@@ -101,6 +101,11 @@ userSchema.pre('save', function(next) {
   // Set isAdmin based on role
   this.isAdmin = this.role === 'admin';
   
+  // Ensure admins can never be blocked
+  if (this.role === 'admin' || this.isAdmin) {
+    this.isBlocked = false;
+  }
+  
   next();
 });
 

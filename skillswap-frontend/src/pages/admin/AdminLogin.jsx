@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '../../store/slices/authSlice';
@@ -6,9 +6,19 @@ import { loginUser } from '../../store/slices/authSlice';
 export default function AdminLogin() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
+	const [blockedError, setBlockedError] = useState('');
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const { loading, error } = useSelector(s => s.auth);
+
+	// Check for blocked error from sessionStorage
+	useEffect(() => {
+		const blockedMsg = sessionStorage.getItem('blockedError');
+		if (blockedMsg) {
+			setBlockedError(blockedMsg);
+			sessionStorage.removeItem('blockedError');
+		}
+	}, []);
 
 	const onSubmit = async (e) => {
 		e.preventDefault();
@@ -28,7 +38,7 @@ export default function AdminLogin() {
 							<h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Admin Login</h1>
 							<p className="mt-2 text-gray-600">Sign in to manage courses, users, and orders.</p>
 						</div>
-						{error && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+						{(error || blockedError) && <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error || blockedError}</div>}
 						<div>
 							<label className="block text-sm font-medium text-gray-700">Email</label>
 							<input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent bg-gray-50" placeholder="admin@skillswap.com" required />

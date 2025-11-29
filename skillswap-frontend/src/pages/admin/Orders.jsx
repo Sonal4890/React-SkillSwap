@@ -17,10 +17,26 @@ export default function Orders() {
       dispatch(fetchAllOrdersAdmin(statusFilter ? { status: statusFilter } : {}));
       dispatch(fetchOrderStatsAdmin());
     }
+    // Auto-refresh every 5s to show new orders/enrollments in real-time
+    const id = setInterval(() => {
+      if (auth?.user?.isAdmin) {
+        dispatch(fetchAllOrdersAdmin(statusFilter ? { status: statusFilter } : {}));
+        dispatch(fetchOrderStatsAdmin());
+      }
+    }, 5000);
+    return () => clearInterval(id);
   }, [dispatch, statusFilter, auth?.user?.isAdmin]);
 
-  const orders = useMemo(() => admin.list || [], [admin.list]);
-  const [editMap, setEditMap] = useState({}); // { [orderId]: { status, paymentStatus } }
+  const orders = useMemo(() => {
+    const seen = new Set();
+    return (admin.list || []).filter(order => {
+      const id = order?._id;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [admin.list]);
+  const [editMap, setEditMap] = useState({}); // { [orderId]: { status } }
 
   const truncate = (text, max = 28) => {
     if (!text) return '';
@@ -28,7 +44,7 @@ export default function Orders() {
   };
 
   const startEdit = (order) => {
-    setEditMap(prev => ({ ...prev, [order._id]: { status: order.status, paymentStatus: order.paymentStatus, saving: false } }));
+    setEditMap(prev => ({ ...prev, [order._id]: { status: order.status, saving: false } }));
   };
 
   const cancelEdit = (orderId) => {
@@ -48,7 +64,7 @@ export default function Orders() {
     if (!data) return;
     try {
       setEditMap(prev => ({ ...prev, [orderId]: { ...prev[orderId], saving: true } }));
-      const res = await api.put(`/api/orders/${orderId}`, { status: data.status, paymentStatus: data.paymentStatus });
+      const res = await api.put(`/api/orders/${orderId}`, { status: data.status });
       // refresh list quickly
       dispatch(fetchAllOrdersAdmin(statusFilter ? { status: statusFilter } : {}));
       cancelEdit(orderId);
@@ -73,11 +89,8 @@ export default function Orders() {
               <div className="flex space-x-2">
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-800 bg-gray-900 text-gray-100 rounded-lg text-sm">
                   <option value="">All Status</option>
+                  <option value="active">Active</option>
                   <option value="completed">Completed</option>
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="refunded">Refunded</option>
                 </select>
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                   <i className="fas fa-download mr-2"></i>
@@ -96,9 +109,9 @@ export default function Orders() {
                   <th className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider">Course</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider w-24">Amount</th>
                   <th className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider w-28">Status</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider w-32">Payment</th>
-                  <th className="px-4 py-2 text-left font-medium text-gray-400 uppercase tracking-wider w-28">Date</th>
-                  <th className="px-3 py-2 text-left font-medium text-gray-400 uppercase tracking-wider w-16">Actions</th>
+                  
+                  <th className="px-4 pl-2 py-2 text-center font-medium text-gray-400 uppercase tracking-wider w-28">Date</th>
+                  <th className="px-3 py-2 pl-2 ml-2 text-ceanter font-medium text-gray-400 uppercase tracking-wider w-20">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-gray-950 divide-y divide-gray-800 text-sm">
@@ -137,49 +150,18 @@ export default function Orders() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       {editMap[order._id] ? (
                         <select value={editMap[order._id].status} onChange={(e)=>changeEdit(order._id,'status',e.target.value)} className="px-2 py-1 border border-gray-800 bg-gray-900 text-gray-100 rounded text-sm">
-                          <option value="pending">pending</option>
-                          <option value="processing">processing</option>
+                          <option value="active">active</option>
                           <option value="completed">completed</option>
-                          <option value="cancelled">cancelled</option>
-                          <option value="refunded">refunded</option>
                         </select>
                       ) : (
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           order.status === 'completed' 
                             ? 'bg-green-900/30 text-green-300'
-                            : order.status === 'pending'
-                            ? 'bg-yellow-900/30 text-yellow-200'
-                            : 'bg-red-900/30 text-red-300'
+                            : 'bg-blue-900/30 text-blue-300'
                         }`}>
                           {order.status}
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2">
-                        {editMap[order._id] ? (
-                          <>
-                            <select value={editMap[order._id].paymentStatus} onChange={(e)=>changeEdit(order._id,'paymentStatus',e.target.value)} className="px-2 py-1 border border-gray-800 bg-gray-900 text-gray-100 rounded text-sm">
-                              <option value="pending">pending</option>
-                              <option value="paid">paid</option>
-                              <option value="failed">failed</option>
-                              <option value="refunded">refunded</option>
-                            </select>
-                            <span className="text-xs text-gray-400 ml-1">{order.paymentMethod}</span>
-                          </>
-                        ) : (
-                          <div className="flex flex-col space-y-1">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              order.paymentStatus === 'paid' 
-                                ? 'bg-green-900/30 text-green-300'
-                                : 'bg-yellow-900/30 text-yellow-200'
-                            }`}>
-                              {order.paymentStatus}
-                            </span>
-                            <span className="text-xs text-gray-400">{order.paymentMethod}</span>
-                          </div>
-                        )}
-                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-gray-400">
                       {new Date(order.createdAt).toLocaleDateString()}
@@ -234,8 +216,8 @@ export default function Orders() {
                 <i className="fas fa-clock text-2xl text-yellow-600"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-400">Pending Orders</p>
-                <p className="text-2xl font-bold text-gray-100">{admin.stats?.pendingOrders ?? '-'}</p>
+                <p className="text-sm font-medium text-gray-400">Active Orders</p>
+                <p className="text-2xl font-bold text-gray-100">{admin.stats?.activeOrders ?? '-'}</p>
               </div>
             </div>
           </div>

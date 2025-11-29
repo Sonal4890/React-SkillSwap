@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { isLoggedIn, isAdmin } = require('../middleware/auth');
+const { isLoggedIn, isAdmin, isLoggedInAdmin, isLoggedInUser } = require('../middleware/auth');
 const { validateObjectId } = require('../middleware/objectId');
 const { 
   placeOrder, 
@@ -15,36 +15,36 @@ const {
 // @route   POST /api/orders
 // @desc    Place order from cart
 // @access  Private
-router.post('/', isLoggedIn, placeOrder);
+router.post('/', isLoggedInUser, placeOrder);
 
 // @route   POST /api/orders/payment
 // @desc    Process payment for order
 // @access  Private
-router.post('/payment', isLoggedIn, processPayment);
+router.post('/payment', isLoggedInUser, processPayment);
 
 // @route   GET /api/orders
 // @desc    Get user's orders
 // @access  Private
-router.get('/', isLoggedIn, getMyOrders);
+router.get('/', isLoggedInUser, getMyOrders);
 
 // @route   GET /api/orders/stats
 // @desc    Get order statistics
 // @access  Private/Admin
-router.get('/stats', isLoggedIn, isAdmin, getOrderStats);
+router.get('/stats', isLoggedInAdmin, isAdmin, getOrderStats);
 
 // @route   GET /api/orders/:orderId
 // @desc    Get order by ID
 // @access  Private
-router.get('/:orderId', isLoggedIn, validateObjectId('orderId'), getOrderById);
+router.get('/:orderId', isLoggedInUser, validateObjectId('orderId'), getOrderById);
 
 // @route   GET /api/orders/admin/all
 // @desc    Get all orders (Admin only)
 // @access  Private/Admin
-router.get('/admin/all', isLoggedIn, isAdmin, getAllOrders);
+router.get('/admin/all', isLoggedInAdmin, isAdmin, getAllOrders);
 
 // @route   PUT /api/orders/:id
 // @desc    Update order status (Admin only)
 // @access  Private/Admin
-router.put('/:id', isLoggedIn, isAdmin, validateObjectId('id'), updateOrderStatus);
+router.put('/:id', isLoggedInAdmin, isAdmin, validateObjectId('id'), updateOrderStatus);
 
 module.exports = router;

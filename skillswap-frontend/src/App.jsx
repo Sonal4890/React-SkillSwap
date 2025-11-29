@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
 import Home from './pages/Home.jsx';
 import Login from './pages/auth/Login.jsx';
-import Register from './pages/auth/Register.jsx';
+// import Register from './pages/auth/Register.jsx';
 import Shop from './pages/Shop.jsx';
 import CourseDetails from './pages/CourseDetails.jsx';
 import Cart from './pages/Cart.jsx';
@@ -18,6 +18,7 @@ import AdminCourses from './pages/admin/Courses.jsx';
 import CoursePreview from './pages/admin/CoursePreview.jsx';
 import Orders from './pages/admin/Orders.jsx';
 import { logoutUser, fetchMe } from './store/slices/authSlice';
+import { fetchMyOrders } from './store/slices/orderSlice';
 import { getCartCount } from './store/slices/cartSlice';
 // Removed separate admin login; use main login only
 
@@ -108,11 +109,18 @@ function Navbar() {
 function AppContent() {
   const dispatch = useDispatch();
   const location = useLocation();
+  const user = useSelector(state => state.auth.user);
 
   useEffect(() => {
     // Check if user is logged in on app load
     dispatch(fetchMe());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (user && !user.isAdmin) {
+      dispatch(fetchMyOrders({ limit: 500 }));
+    }
+  }, [dispatch, user?.id, user?.isAdmin]);
 
   const isAdminRoute = location.pathname.startsWith('/admin');
 
@@ -134,7 +142,7 @@ function AppContent() {
             <Route path="/cart" element={<StudentRoute><Cart /></StudentRoute>} />
             <Route path="/about" element={<About />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            {/* <Route path="/register" element={<Register />} /> */}
             {/* No separate admin login route */}
 
             <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />

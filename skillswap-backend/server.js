@@ -4,7 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 
 // Load environment variables
@@ -16,7 +15,9 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(express.json());
+// Increase body size limits to support base64 images for course uploads
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
 // CORS
@@ -37,15 +38,6 @@ app.use(helmet());
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
 }
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false
-});
-app.use('/api/', limiter);
 
 // Health check
 app.get('/healthz', (req, res) => {

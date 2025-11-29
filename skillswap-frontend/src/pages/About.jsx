@@ -31,7 +31,7 @@ export default function About() {
             </div>
             <div className="relative">
               <img 
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1000&auto=format&fit=crop" 
+                src="https://i.pinimg.com/736x/f0/93/c1/f093c1f983f59b7ebf94db393ed56e97.jpg" 
                 alt="Learning together" 
                 className="rounded-lg shadow-lg"
               />
@@ -111,40 +111,40 @@ export default function About() {
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <img 
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop" 
+                src="https://i.pinimg.com/736x/c6/45/5d/c6455dbe43cbdebf7184aac3b5426620.jpg" 
                 alt="John Doe" 
                 className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
               />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">John Doe</h3>
-              <p className="text-blue-600 mb-2">CEO & Founder</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Chandan Shruti</h3>
+              <p className="text-blue-600 mb-2">Backend Developer</p>
               <p className="text-gray-600 text-sm">
-                Passionate about education and technology, John founded SkillSwap to make 
+                Passionate about education and technology, shruti founded SkillSwap to make 
                 quality learning accessible to everyone.
               </p>
             </div>
             <div className="text-center">
               <img 
-                src="https://images.unsplash.com/photo-1494790108755-2616b612b786?q=80&w=300&auto=format&fit=crop" 
+                src="https://i.pinimg.com/736x/f7/2e/b4/f72eb4dff7efee85e8bceb5036b881dc.jpg" 
                 alt="Jane Smith" 
-                className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-2 border-pink-300"
               />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Jane Smith</h3>
-              <p className="text-blue-600 mb-2">Head of Education</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Marwadi Sonal</h3>
+              <p className="text-blue-600 mb-2">Full-Stack Developer</p>
               <p className="text-gray-600 text-sm">
-                With over 10 years in educational technology, Jane ensures our courses 
+                With over 1 year in educational technology, sonal ensures our courses 
                 meet the highest quality standards.
               </p>
             </div>
             <div className="text-center">
               <img 
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=300&auto=format&fit=crop" 
+                src="https://i.pinimg.com/736x/cf/ec/f1/cfecf17b4b04453692d5060625d6b8cd.jpg" 
                 alt="Mike Johnson" 
                 className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
               />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Mike Johnson</h3>
-              <p className="text-blue-600 mb-2">CTO</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Ghoghari Nensi</h3>
+              <p className="text-blue-600 mb-2">Frontend Developer</p>
               <p className="text-gray-600 text-sm">
-                Mike leads our technical team, building the platform that makes 
+                nensi leads our technical team, building the platform that makes 
                 seamless learning possible.
               </p>
             </div>

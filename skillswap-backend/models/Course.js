@@ -4,7 +4,9 @@ const courseSchema = new mongoose.Schema({
   course_name: {
     type: String,
     required: [true, 'Course name is required'],
-    trim: true
+    trim: true,
+    minlength: [3, 'Course name must be atleast 3 characters'],
+    maxlength: [150, 'Course name is too long']
   },
   description: {
     type: String,
@@ -23,20 +25,17 @@ const courseSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Store base64 image data URL or external URL string
   course_image: {
     type: String,
-    default: 'https://via.placeholder.com/300x200?text=Course+Image'
+    default: ''
   },
   instructor: {
     type: String,
     required: [true, 'Instructor name is required'],
     trim: true
   },
-  instructor_email: {
-    type: String,
-    required: [true, 'Instructor email is required'],
-    lowercase: true
-  },
+  // Removed instructor_email per requirements
   duration: {
     type: String,
     default: 'Not specified'
@@ -46,10 +45,7 @@ const courseSchema = new mongoose.Schema({
     enum: ['beginner', 'intermediate', 'advanced'],
     default: 'beginner'
   },
-  language: {
-    type: String,
-    default: 'English'
-  },
+  // Removed language per requirements
   isActive: {
     type: Boolean,
     default: true
@@ -77,6 +73,16 @@ const courseSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Ensure unique course names ignoring case to prevent duplicates
+courseSchema.index(
+  { course_name: 1 },
+  {
+    unique: true,
+    collation: { locale: 'en', strength: 2 },
+    name: 'unique_course_name_ci'
+  }
+);
 
 // Update the updatedAt field before saving
 courseSchema.pre('save', function(next) {

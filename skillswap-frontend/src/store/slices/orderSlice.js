@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { api } from '../../lib/api';
+import { logoutUser } from './authSlice';
 
 // Place order from cart
 export const placeOrder = createAsyncThunk('orders/place', async (orderData, { rejectWithValue }) => {
@@ -12,9 +13,9 @@ export const placeOrder = createAsyncThunk('orders/place', async (orderData, { r
 });
 
 // Get user's orders
-export const fetchMyOrders = createAsyncThunk('orders/fetchMy', async (_, { rejectWithValue }) => {
+export const fetchMyOrders = createAsyncThunk('orders/fetchMy', async (params = {}, { rejectWithValue }) => {
   try {
-    const { data } = await api.get('/api/orders');
+    const { data } = await api.get('/api/orders', { params });
     return data.orders;
   } catch (err) {
     return rejectWithValue(err.response?.data || { message: 'Failed to fetch orders' });
@@ -62,6 +63,45 @@ export const fetchOrderStatsAdmin = createAsyncThunk('orders/fetchStatsAdmin', a
   }
 });
 
+const normalizeId = (value) => {
+  if (!value) return '';
+  return typeof value === 'string' ? value : value.toString();
+};
+
+const dedupeOrderCourses = (courses = []) => {
+  const seen = new Set();
+  const cleaned = [];
+  for (const courseItem of courses || []) {
+    const id = normalizeId(courseItem?.course?._id ?? courseItem?.course);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    cleaned.push(courseItem);
+  }
+  return cleaned;
+};
+
+const sanitizeOrder = (order) => {
+  if (!order) return order;
+  const normalized = { ...order };
+  if (Array.isArray(normalized.courses)) {
+    normalized.courses = dedupeOrderCourses(normalized.courses);
+  }
+  return normalized;
+};
+
+const dedupeOrderList = (orders = []) => {
+  const seen = new Set();
+  const cleaned = [];
+  for (const order of orders || []) {
+    if (!order) continue;
+    const id = normalizeId(order._id);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    cleaned.push(sanitizeOrder(order));
+  }
+  return cleaned;
+};
+
 const initialState = {
   orders: [],
   currentOrder: null,
@@ -95,8 +135,8 @@ const orderSlice = createSlice({
       })
       .addCase(placeOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentOrder = action.payload.order;
-        state.orders.unshift(action.payload.order);
+        state.currentOrder = sanitizeOrder(action.payload.order);
+        state.orders = dedupeOrderList([state.currentOrder, ...state.orders]);
       })
       .addCase(placeOrder.rejected, (state, action) => {
         state.loading = false;
@@ -110,7 +150,7 @@ const orderSlice = createSlice({
       })
       .addCase(fetchMyOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload;
+        state.orders = dedupeOrderList(action.payload);
       })
       .addCase(fetchMyOrders.rejected, (state, action) => {
         state.loading = false;
@@ -124,7 +164,7 @@ const orderSlice = createSlice({
       })
       .addCase(fetchOrderById.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentOrder = action.payload;
+        state.currentOrder = sanitizeOrder(action.payload);
       })
       .addCase(fetchOrderById.rejected, (state, action) => {
         state.loading = false;
@@ -152,7 +192,7 @@ const orderSlice = createSlice({
       })
       .addCase(fetchAllOrdersAdmin.fulfilled, (state, action) => {
         state.loading = false;
-        state.admin.list = action.payload.orders;
+        state.admin.list = dedupeOrderList(action.payload.orders);
         state.admin.total = action.payload.total;
         state.admin.currentPage = action.payload.currentPage;
       })
@@ -173,6 +213,11 @@ const orderSlice = createSlice({
       .addCase(fetchOrderStatsAdmin.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload?.message;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.orders = [];
+        state.currentOrder = null;
+        state.admin = { list: [], total: 0, currentPage: 1, stats: null };
       });
   }
 });

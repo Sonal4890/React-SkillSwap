@@ -39,50 +39,116 @@ const validateCourse = [
     .trim()
     .notEmpty()
     .withMessage('Course name is required')
-    .isLength({ min: 3, max: 100 })
-    .withMessage('Course name must be between 3 and 100 characters'),
+    .custom((value) => {
+      if (value.length < 3) {
+        throw new Error('Course name must be atleast 3 characters');
+      }
+      if (value.length > 150) {
+        throw new Error('Course name is too long');
+      }
+      // Ensure it contains at least one letter (not just numbers or special characters)
+      if (!/[a-zA-Z]/.test(value)) {
+        throw new Error('Course name must contain at least one letter');
+      }
+      return true;
+    }),
   
   body('description')
     .trim()
     .notEmpty()
-    .withMessage('Course description is required')
-    .isLength({ min: 10, max: 2000 })
-    .withMessage('Description must be between 10 and 2000 characters'),
+    .withMessage('Description is required')
+    .custom((value) => {
+      if (value.length < 10) {
+        throw new Error('Description is too short');
+      }
+      if (value.length > 5000) {
+        throw new Error('Description is too long');
+      }
+      return true;
+    }),
   
   body('price')
-    .isNumeric()
-    .withMessage('Price must be a number')
-    .isFloat({ min: 0 })
-    .withMessage('Price cannot be negative'),
+    .custom((value) => {
+      if (value === '' || value === null || value === undefined) {
+        throw new Error('Price is required');
+      }
+      // Convert to number
+      const numValue = Number(value);
+      if (isNaN(numValue)) {
+        throw new Error('Please enter a valid number');
+      }
+      if (numValue < 0) {
+        throw new Error('Price must be 0 or greater');
+      }
+      // Check for very large numbers (edge case)
+      if (numValue > 100000000000) {
+        throw new Error('Price is too large');
+      }
+      return true;
+    }),
   
   body('category')
     .notEmpty()
-    .withMessage('Course category is required')
-    .isIn(['development', 'business', 'it', 'marketing', 'design', 'data-science', 'ai-ml', 'other'])
-    .withMessage('Invalid category selected'),
+    .withMessage('Category is required')
+    .custom((value) => {
+      const validCategories = ['development', 'business', 'it', 'finance', 'marketing', 'design', 'data-science', 'ai-ml', 'other'];
+      // Support comma-separated tags
+      const categories = value.split(',').map(c => c.trim()).filter(c => c);
+      const invalidCategories = categories.filter(c => !validCategories.includes(c));
+      if (invalidCategories.length > 0) {
+        throw new Error('Please select a valid category');
+      }
+      return true;
+    }),
+  
+  body('subcategory')
+    .notEmpty()
+    .withMessage('Subcategory is required')
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Subcategory must be less than 50 characters'),
   
   body('course_image')
-    .optional()
-    .isURL()
-    .withMessage('Course image must be a valid URL'),
+    .notEmpty()
+    .withMessage('Course image is required')
+    .custom((value) => {
+      if (!value) {
+        throw new Error('Course image is required');
+      }
+      // Check if it's a valid URL (http/https)
+      const urlPattern = /^https?:\/\/.+/i;
+      // Check if it's a valid data URL (data:image/...)
+      const dataUrlPattern = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,.+/i;
+      if (urlPattern.test(value) || dataUrlPattern.test(value)) {
+        return true;
+      }
+      throw new Error('Course image must be a valid URL or image file');
+    }),
+  
+  body('duration')
+    .notEmpty()
+    .withMessage('Duration is required')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Duration must be between 1 and 50 characters'),
   
   body('instructor')
     .trim()
     .notEmpty()
     .withMessage('Instructor name is required')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Instructor name must be between 2 and 50 characters'),
-  
-  body('instructor_email')
-    .isEmail()
-    .withMessage('Please enter a valid instructor email')
-    .normalizeEmail(),
-  
-  body('duration')
-    .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Duration must be less than 50 characters'),
+    .custom((value) => {
+      if (value.length < 3) {
+        throw new Error('Instructor name must be atleast 3 characters');
+      }
+      if (value.length > 50) {
+        throw new Error('Instructor name must be less than 50 characters');
+      }
+      // Ensure it contains at least one letter (not just numbers or special characters)
+      if (!/[a-zA-Z]/.test(value)) {
+        throw new Error('Instructor name must contain at least one letter');
+      }
+      return true;
+    }),
   
   body('level')
     .optional()
@@ -93,13 +159,7 @@ const validateCourse = [
     .optional()
     .trim()
     .isLength({ max: 30 })
-    .withMessage('Language must be less than 30 characters'),
-  
-  body('subcategory')
-    .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Subcategory must be less than 50 characters')
+    .withMessage('Language must be less than 30 characters')
 ];
 
 module.exports = {

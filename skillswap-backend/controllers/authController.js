@@ -87,6 +87,14 @@ const login = async (req, res) => {
       });
     }
 
+    // Check if user is blocked (admins cannot be blocked)
+    if (user.isBlocked && (user.role !== 'admin' && !user.isAdmin)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin Blocked You'
+      });
+    }
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
@@ -99,8 +107,11 @@ const login = async (req, res) => {
     // Generate token
     const token = generateToken(user._id);
 
+    // Use separate cookies to allow concurrent admin and user sessions
+    const cookieName = user.isAdmin ? 'admin_token' : 'user_token';
+
     // Set cookie (SameSite=Lax for dev friendliness across ports)
-    res.cookie('token', token, {
+    res.cookie(cookieName, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -129,10 +140,9 @@ const login = async (req, res) => {
 
 // Logout User
 const logout = (req, res) => {
-  res.cookie('token', '', {
-    httpOnly: true,
-    expires: new Date(0)
-  });
+  // Clear both possible cookies
+  res.cookie('user_token', '', { httpOnly: true, expires: new Date(0) });
+  res.cookie('admin_token', '', { httpOnly: true, expires: new Date(0) });
 
   res.status(200).json({
     success: true,
@@ -171,6 +181,15 @@ module.exports = {
   login,
   logout,
   getMe
+};
+
+module.exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error getting all users', error: error.message });
+  }
 };
 
 // Admin password reset: request
